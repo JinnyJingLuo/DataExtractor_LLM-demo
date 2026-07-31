@@ -1,0 +1,71 @@
+paper_id,prediction_sample_id,ground_truth_sample_id,note
+Paper1,agb1,agbi,OCR/ID typo
+Paper10,exp1_h_charged,h_charged_exp1,condition order differs
+Paper10,exp2_h_charged,h_charged_exp2,condition order differs
+Paper10,exp3_h_charged,h_charged_exp3,condition order differs
+Paper10,exp4_h_charged,h_charged_exp4,condition order differs
+Paper10,exp1_h_free,h_free_exp1,condition order differs
+Paper10,exp2_h_free,h_free_exp2,condition order differs
+Paper10,exp3_h_free,h_free_exp3,condition order differs
+Paper10,exp4_h_free,h_free_exp4,condition order differs
+Paper11,1#sample,1#hrq,numbered sample label
+Paper11,2#sample,2#crq,numbered sample label
+Paper11,3#sample,3#hrq,numbered sample label
+Paper11,4#sample,4#crq,numbered sample label
+Paper14,1,shot_1,shot prefix omitted
+Paper14,2,shot_2,shot prefix omitted
+Paper14,3,shot_3,shot prefix omitted
+Paper14,4,shot_4,shot prefix omitted
+Paper14,5,shot_5,shot prefix omitted
+Paper14,6,shot_6,shot prefix omitted
+Paper14,7,shot_7,shot prefix omitted
+Paper14,8,shot_8,shot prefix omitted
+Paper14,9,shot_9,shot prefix omitted
+Paper14,10,shot_10,shot prefix omitted
+Paper14,11,shot_11,shot prefix omitted
+Paper14,12,shot_12,shot prefix omitted
+Paper20,1,exp_1,experiment prefix omitted
+Paper22,al_t_18c,al_1_18,label suffix differs
+Paper22,al_t_24,al_1_24,label family differs
+Paper22,al_t_31,al_1_31,label family differs
+Paper22,al_t_35,al_1_35,label family differs
+Paper22,al_t_38,al_1_38,label family differs
+Paper22,al_t_4,al_1_4,label family differs
+Paper22,al_t_40,al_1_40,label family differs
+Paper22,al_t_5,al_1_5,label family differs
+Paper22,ma_t_23,ma_1_23,label family differs
+Paper22,ma_t_28,ma_1_28,label family differs
+Paper22,ma_t_32,ma_1_32,label family differs
+Paper22,ma_t_39,ma_1_39,label family differs
+Paper22,ma_t_46,ma_1_46,label family differs
+Paper22,ma_t_47,ma_1_47,label family differs
+Paper22,ma_t_48,ma_1_48,label family differs
+Paper22,ma_t_49,ma_1_49,label family differs
+Paper24,1,shot_1,shot prefix omitted
+Paper24,2,shot_2,shot prefix omitted
+Paper24,3,shot_3,shot prefix omitted
+Paper24,4,shot_4,shot prefix omitted
+Paper24,5,shot_5,shot prefix omitted
+Paper24,6,shot_6,shot prefix omitted
+Paper24,7,shot_7,shot prefix omitted
+Paper24,8,shot_8,shot prefix omitted
+Paper24,9,shot_9,shot prefix omitted
+Paper24,10,shot_10,shot prefix omitted
+Paper24,11,shot_11,shot prefix omitted
+Paper24,12,shot_12,shot prefix omitted
+Paper24,13,shot_13,shot prefix omitted
+Paper24,14,shot_14,shot prefix omitted
+Paper24,15,shot_15,shot prefix omitted
+Paper24,16,shot_16,shot prefix omitted
+Paper26,ni3al_lat_1,ni3al_lat_01,zero padding differs
+Paper26,ni3al_rec_1,ni3al_rec_01,zero padding differs
+Paper26,ni_eos_1,ni_eos_01,zero padding differs
+Paper26,ni_lat_1,ni_lat_01,zero padding differs
+Paper26,ni_rec_1,ni_rec_01,zero padding differs
+Paper26,nico_lat_1,nico_lat_01,zero padding differs
+Paper26,nico_rec_1,nico_rec_01,zero padding differs
+Paper29,1,shot_1_(serial_5),shot prefix and serial annotation omitted
+Paper29,2,shot_2_(serial_1),shot prefix and serial annotation omitted
+Paper29,3,shot_3_(serial_2),shot prefix and serial annotation omitted
+Paper29,4,shot_4_(serial_3),shot prefix and serial annotation omitted
+Paper29,5,shot_5_(serial_4),shot prefix and serial annotation omitted

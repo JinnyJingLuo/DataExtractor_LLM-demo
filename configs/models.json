@@ -1,0 +1,12 @@
+{
+  "provider": "vertex",
+  "project": "dataextractionllm-503420",
+  "location": "global",
+  "model_id": "gemini-3.1-pro-preview",
+  "max_attempts": 2,
+  "retry_delay_seconds": 2.0,
+  "inter_paper_delay_seconds": 2.5,
+  "generation_config": {},
+  "input_price_per_million_tokens_usd": null,
+  "output_price_per_million_tokens_usd": null
+}

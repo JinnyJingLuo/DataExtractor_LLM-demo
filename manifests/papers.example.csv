@@ -1,0 +1,3 @@
+paper_id,pdf_path,split,include,selection_note
+Paper1,/absolute/path/to/Paper1.pdf,development,true,Original development paper
+Heldout001,/absolute/path/to/new-paper.pdf,heldout,true,Selected before prompt freeze and never used for prompt development

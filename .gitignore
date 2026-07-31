@@ -1,0 +1,40 @@
+.venv/
+.venv-legacy/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+artifacts/
+results/
+legacy_gemini_pipeline/outputs/
+legacy_gemini_pipeline/papers
+manifests/papers.csv
+*.egg-info/
+
+# Private data / scratch -- not for public distribution. Only code and one
+# demo paper (Papers/Sample Papers/Paper12.pdf) are meant to be public.
+/AI_OCR_NeurIPS.pdf
+/Database_Spall_New_AliShargh.zip
+/claude-skills.tgz
+/data/Ground_truth_Table.csv
+/logs/
+/figure_refine_pipeline/reports/
+/figure_refine_pipeline/*.log
+/legacy_gemini_pipeline/extract_paper3_gemini31.py
+/legacy_gemini_pipeline/extract_paper3_gemini31_paper1.py
+/legacy_gemini_pipeline/outputs_gemini31_api/
+/legacy_gemini_pipeline/outputs_gemini31_paper1/
+/configs/models.claude_api_8192.json
+/configs/models.claude_api_opus.json
+/configs/models.claude_api_opus_smoke.json
+/configs/models.gemini_file_api_high_res.json
+/figure_refine_pipeline/run_batch.py
+/figure_refine_pipeline/run_high_repeat_*.py
+/figure_refine_pipeline/run_medium_repeat_*.py
+/manifests/*.csv
+!/manifests/papers.example.csv
+
+# Papers/ -- only the one demo paper below stays public
+/Papers/*
+!/Papers/Sample Papers/
+/Papers/Sample Papers/*
+!/Papers/Sample Papers/Paper12.pdf

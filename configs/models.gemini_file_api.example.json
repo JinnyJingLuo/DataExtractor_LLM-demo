@@ -1,0 +1,10 @@
+{
+  "provider": "gemini_file_api",
+  "model_id": "gemini-3.1-pro-preview",
+  "max_attempts": 2,
+  "retry_delay_seconds": 30,
+  "inter_paper_delay_seconds": 30,
+  "generation_config": {},
+  "input_price_per_million_tokens_usd": null,
+  "output_price_per_million_tokens_usd": null
+}

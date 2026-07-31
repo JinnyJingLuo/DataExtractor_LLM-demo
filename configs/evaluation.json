@@ -1,0 +1,34 @@
+{
+  "relative_tolerance": 0.005,
+  "absolute_tolerance": 0.0,
+  "numeric_floor": 1e-12,
+  "null_values": ["", "-", "null", "none", "nan", "n/a", "na", "not reported", "not available"],
+  "categorical_fields": [
+    "Metal Symbol",
+    "Synthesis Method",
+    "Treatment",
+    "Flyer Material Name",
+    "Flyer Material Code",
+    "Experiment Type",
+    "Reference Title",
+    "DOI"
+  ],
+  "external_reference_fields": [
+    "Initial Temperature (K)",
+    "Melting Point (K)",
+    "Initial Density (g/cm3)",
+    "Initial Density (g/cm³)"
+  ],
+  "allowed_tiers": ["T1", "T2", "T3", "NA"],
+  "allowed_provenance": [
+    "paper_text",
+    "paper_table",
+    "paper_equation",
+    "paper_figure",
+    "derived_from_paper",
+    "external_reference",
+    "not_available",
+    "unknown"
+  ],
+  "ignored_fields": ["Verification", "source_file"]
+}

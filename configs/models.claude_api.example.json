@@ -1,0 +1,13 @@
+{
+  "provider": "claude_api",
+  "model_id": "claude-sonnet-4-5",
+  "max_attempts": 4,
+  "retry_delay_seconds": 60.0,
+  "inter_paper_delay_seconds": 60.0,
+  "generation_config": {
+    "max_tokens": 4096,
+    "temperature": 0
+  },
+  "input_price_per_million_tokens_usd": null,
+  "output_price_per_million_tokens_usd": null
+}
