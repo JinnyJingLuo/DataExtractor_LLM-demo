@@ -424,21 +424,6 @@ def _normalize_pass1_cell(value) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def _normalize_sample_id_for_matching(value) -> str:
-    """Collapse '-' and '_' separator variants for cross-draw lookup only.
-
-    Pass-1 formats Sample IDs inconsistently between calls -- observed on
-    the same paper, same prompt: draw 1 wrote "VA0_300", draws 2 and 3 wrote
-    "VA0-300". Comparing raw strings across draws made every sample look
-    "missing" from every other draw, producing false low-confidence results
-    for the entire table. This is used only as a lookup key; the original,
-    unnormalized Sample ID string is still what gets reported and what
-    downstream code (the extracted table, the T2 gate) keys on.
-    """
-    text = str(value).strip()
-    return re.sub(r"[-_]+", "_", text)
-
-
 def _parse_float(value: str) -> float | None:
     if value in {"-", "<MISSING_SAMPLE>", "<MISSING_FIELD>"}:
         return None
@@ -464,35 +449,34 @@ def summarize_pass1_consistency(
 ) -> pd.DataFrame:
     """Compare repeated Pass-1 outputs against the selected Pass-1 table.
 
+    Rows are aligned across draws by position, not by Sample ID text (see
+    pass1_reconcile.align_draws_by_position) -- Pass-1's own Sample ID text
+    can differ across draws even for the same experiments in the same order
+    (observed on Paper13: "1","2","3"... vs "Expt 1","Expt 2"...), which
+    used to make every one of a draw's rows look "missing" and report
+    misleadingly low consistency for the whole table.
+
     This is an audit artifact only. It does not change the selected extraction,
     so downstream evaluation remains comparable with the original one-pass run.
     """
+    from pass1_reconcile import align_draws_by_position
+
     rows = []
     fields = [column for column in selected.columns if column != "Sample ID"]
-    indexed_draws = []
-    for draw in draws:
-        if "Sample ID" not in draw.columns:
-            continue
-        normalized_draw = draw.assign(
-            **{"Sample ID": draw["Sample ID"].map(_normalize_sample_id_for_matching)}
-        )
-        indexed_draws.append(
-            normalized_draw.drop_duplicates(subset=["Sample ID"], keep="first").set_index("Sample ID")
-        )
-    for _, selected_row in selected.iterrows():
+    aligned_draws = align_draws_by_position(selected, draws)
+    for pos, (_, selected_row) in enumerate(selected.iterrows()):
         sample_id = str(selected_row["Sample ID"]).strip()
-        lookup_key = _normalize_sample_id_for_matching(sample_id)
         for field_name in fields:
             selected_value = _normalize_pass1_cell(selected_row[field_name])
             observed_values = []
-            for draw in indexed_draws:
-                if lookup_key not in draw.index:
+            for draw in aligned_draws:
+                if draw is None:
                     observed_values.append("<MISSING_SAMPLE>")
                     continue
                 if field_name not in draw.columns:
                     observed_values.append("<MISSING_FIELD>")
                     continue
-                observed_values.append(_normalize_pass1_cell(draw.loc[lookup_key, field_name]))
+                observed_values.append(_normalize_pass1_cell(draw.iloc[pos][field_name]))
 
             agreement_count = sum(
                 _pass1_values_agree(selected_value, value) for value in observed_values

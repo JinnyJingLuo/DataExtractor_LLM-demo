@@ -26,7 +26,6 @@ from run_figure_refine import (
     FIG_RE,
     PRIORITY3_RE,
     _normalize_pass1_cell,
-    _normalize_sample_id_for_matching,
 )
 
 
@@ -37,24 +36,46 @@ def _try_float(value: str) -> float | None:
         return None
 
 
-def _index_draws_by_sample_id(draws: list[pd.DataFrame]) -> list[pd.DataFrame]:
-    indexed = []
-    for draw in draws:
-        if "Sample ID" not in draw.columns:
-            continue
-        normalized = draw.assign(
-            **{"Sample ID": draw["Sample ID"].map(_normalize_sample_id_for_matching)}
-        )
-        indexed.append(
-            normalized.drop_duplicates(subset=["Sample ID"], keep="first").set_index("Sample ID")
-        )
-    return indexed
+def align_draws_by_position(
+    selected: pd.DataFrame, draws: list[pd.DataFrame]
+) -> list[pd.DataFrame | None]:
+    """Align each draw to `selected` by row position, not by Sample ID text.
+
+    Pass-1's own Sample ID text is unstable across draws when a paper has
+    no clear native sample-naming scheme for the model to extract --
+    observed on Paper13: draws 1/2 used bare numbers "1", "2", "3"... while
+    draw 3 used "Expt 1", "Expt 2"... for the exact same 29 experiments in
+    the exact same order (verified against other columns, e.g. Impact
+    Velocity, which lined up exactly row-by-row across all three draws).
+    Matching by text made every one of that draw's rows look "missing" from
+    the others -- reconcile_pass1_table silently discarded a third of the
+    sampling effort with no visible signal, since its confidence math just
+    shrank its own denominator to match rather than flagging the loss.
+
+    Only trusts a draw for position-based alignment when its row count
+    matches `selected`'s -- a draw with a different row count can't be
+    safely assumed to list the same shots in the same order (it may have
+    dropped or added a row), so it's excluded entirely (None) rather than
+    risk silently pairing unrelated rows together, which would be worse
+    than the text-matching bug this replaces.
+
+    Returns one entry per draw, in the same order as `draws`; None for any
+    draw that doesn't qualify.
+    """
+    n = len(selected)
+    return [draw.reset_index(drop=True) if len(draw) == n else None for draw in draws]
 
 
 def reconcile_pass1_table(
     selected: pd.DataFrame, draws: list[pd.DataFrame]
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Reconcile Table 1 across repeated Pass-1 draws, per sample/field.
+    """Reconcile Table 1 across repeated Pass-1 draws, per row-position/field.
+
+    Rows are aligned across draws by position (see align_draws_by_position),
+    not by matching Sample ID text -- so "Sample ID" itself is now just
+    another field to reconcile like any other (majority-voted across draws,
+    "-" competing as a valid label same as any text field), rather than the
+    fragile join key it used to be.
 
     A field is treated as numeric if every non-missing observed value across
     draws parses as a float (reconciled via cluster_and_reconcile); otherwise
@@ -69,22 +90,28 @@ def reconcile_pass1_table(
     that value at "high" confidence) -- safe to call unconditionally.
 
     Returns (reconciled_table, audit_rows) where audit_rows has columns
-    sample_id, field_name, value, confidence, majority_fraction.
+    sample_id, field_name, value, confidence, majority_fraction. "Sample ID"
+    itself is reconciled into the table but excluded from audit_rows -- it's
+    an alignment key, not a scientific measurement, so its own cross-draw
+    agreement shouldn't count toward downstream confidence/accuracy stats
+    (those numbers should reflect the actual extracted values only).
     """
-    fields = [c for c in selected.columns if c != "Sample ID"]
-    indexed_draws = _index_draws_by_sample_id(draws)
+    fields = ["Sample ID"] + [c for c in selected.columns if c != "Sample ID"]
+    aligned_draws = align_draws_by_position(selected, draws)
 
     reconciled = selected.copy()
     audit_rows = []
-    for idx, selected_row in selected.iterrows():
-        sample_id = str(selected_row["Sample ID"]).strip()
-        lookup_key = _normalize_sample_id_for_matching(sample_id)
+    for pos, (idx, selected_row) in enumerate(selected.iterrows()):
+        # Reconciling "Sample ID" first (fields list starts with it) means
+        # this reflects the reconciled label, not just the selected draw's
+        # raw guess, for every other field's audit row in this same row.
+        resolved_sample_id = str(selected_row["Sample ID"]).strip()
         for field_name in fields:
             observed = []
-            for draw in indexed_draws:
-                if lookup_key not in draw.index or field_name not in draw.columns:
+            for draw in aligned_draws:
+                if draw is None or field_name not in draw.columns:
                     continue
-                observed.append(_normalize_pass1_cell(draw.loc[lookup_key, field_name]))
+                observed.append(_normalize_pass1_cell(draw.iloc[pos][field_name]))
             if not observed:
                 continue
 
@@ -103,6 +130,8 @@ def reconcile_pass1_table(
                 final_value = label if label is not None else selected_row[field_name]
 
             reconciled.at[idx, field_name] = final_value
+            if field_name == "Sample ID" and final_value:
+                resolved_sample_id = str(final_value).strip()
             if confidence != "high":
                 if "Needs Review" not in reconciled.columns:
                     reconciled["Needs Review"] = ""
@@ -111,9 +140,11 @@ def reconcile_pass1_table(
                     f"{existing}; {field_name}" if existing else field_name
                 )
 
+            if field_name == "Sample ID":
+                continue
             audit_rows.append(
                 {
-                    "sample_id": sample_id,
+                    "sample_id": resolved_sample_id,
                     "field_name": field_name,
                     "value": final_value,
                     "confidence": confidence,

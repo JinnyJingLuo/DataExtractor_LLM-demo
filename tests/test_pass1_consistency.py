@@ -68,9 +68,18 @@ def test_pass1_consistency_matches_samples_across_hyphen_underscore_variants():
     assert "<MISSING_SAMPLE>" not in json.loads(row["observed_values_json"])
 
 
-def test_pass1_consistency_treats_missing_records_as_low_confidence():
+def test_pass1_consistency_treats_row_count_mismatch_as_low_confidence():
+    # Rows are aligned across draws by position now, not by Sample ID text
+    # (see pass1_reconcile.align_draws_by_position) -- a draw with a
+    # different row count can't be safely position-aligned at all, so it's
+    # excluded entirely rather than risk pairing unrelated rows.
     first = pd.DataFrame([{"Sample ID": "S1", "Spall Strength (GPa)": 1.0}])
-    second = pd.DataFrame([{"Sample ID": "S2", "Spall Strength (GPa)": 1.0}])
+    second = pd.DataFrame(
+        [
+            {"Sample ID": "S1", "Spall Strength (GPa)": 1.0},
+            {"Sample ID": "S2", "Spall Strength (GPa)": 2.0},
+        ]
+    )
 
     rows = summarize_pass1_consistency(first, [first, second])
     row = rows.iloc[0]

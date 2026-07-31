@@ -2,10 +2,18 @@ import pandas as pd
 import pytest
 
 from pass1_reconcile import (
+    align_draws_by_position,
     classify_evidence_tier,
     reconcile_evidence_tiers,
     reconcile_pass1_table,
 )
+
+
+def _audit_row(audit: pd.DataFrame, field_name: str) -> pd.Series:
+    # "Sample ID" is reconciled first and gets its own audit row now too, so
+    # a raw positional .iloc[0] no longer reliably means "the field under
+    # test" -- look up by name instead.
+    return audit[audit["field_name"] == field_name].iloc[0]
 
 
 def test_reconcile_pass1_table_numeric_field_uses_cluster_and_reconcile():
@@ -18,7 +26,7 @@ def test_reconcile_pass1_table_numeric_field_uses_cluster_and_reconcile():
     ]
     reconciled, audit = reconcile_pass1_table(selected, draws)
     assert reconciled.loc[0, "Longitudinal Stress at HEL (GPa)"] == pytest.approx(3.349)
-    row = audit.iloc[0]
+    row = _audit_row(audit, "Longitudinal Stress at HEL (GPa)")
     assert row["confidence"] == "high"
     assert row["majority_fraction"] == pytest.approx(2 / 3)
 
@@ -45,17 +53,24 @@ def test_reconcile_pass1_table_text_field_uses_majority_vote():
     ]
     reconciled, audit = reconcile_pass1_table(selected, draws)
     assert reconciled.loc[0, "Treatment"] == "Annealed"
-    assert audit.iloc[0]["confidence"] == "high"
+    assert _audit_row(audit, "Treatment")["confidence"] == "high"
 
 
 def test_reconcile_pass1_table_single_draw_degenerates_to_that_value():
     selected = pd.DataFrame([{"Sample ID": "S1", "Hardness": "10.472"}])
     reconciled, audit = reconcile_pass1_table(selected, [selected])
     assert reconciled.loc[0, "Hardness"] == pytest.approx(10.472)
-    assert audit.iloc[0]["confidence"] == "high"
+    assert _audit_row(audit, "Hardness")["confidence"] == "high"
 
 
-def test_reconcile_pass1_table_matches_hyphen_underscore_sample_id_variants():
+def test_reconcile_pass1_table_sample_id_reconciled_via_majority_vote_like_any_field():
+    # Sample ID is no longer a special join key with format normalization --
+    # rows are aligned by position now (see the position-based tests below),
+    # so Sample ID text itself is majority-voted across draws too (exact
+    # match, no "-"/"_" normalization): 2 of 3 draws say "VA0-300", 1 says
+    # "VA0_300" -- the literal majority wins. But it's excluded from
+    # audit_rows -- it's an alignment key, not a measurement, so its own
+    # agreement shouldn't count toward confidence/accuracy stats.
     selected = pd.DataFrame([{"Sample ID": "VA0_300", "Hardness": "10.0"}])
     draws = [
         pd.DataFrame([{"Sample ID": "VA0_300", "Hardness": "10.0"}]),
@@ -63,9 +78,55 @@ def test_reconcile_pass1_table_matches_hyphen_underscore_sample_id_variants():
         pd.DataFrame([{"Sample ID": "VA0-300", "Hardness": "10.0"}]),
     ]
     reconciled, audit = reconcile_pass1_table(selected, draws)
-    assert reconciled.loc[0, "Sample ID"] == "VA0_300"  # original form preserved
-    assert audit.iloc[0]["confidence"] == "high"
-    assert audit.iloc[0]["majority_fraction"] == pytest.approx(1.0)
+    assert reconciled.loc[0, "Sample ID"] == "VA0-300"
+    assert "Sample ID" not in audit["field_name"].values
+
+
+def test_reconcile_pass1_table_aligns_rows_by_position_despite_different_id_text():
+    # Real Paper13 shape: draws 1-2 name samples "1","2",... while draw 3
+    # names them "Expt 1","Expt 2",... for the exact same experiments in the
+    # exact same order. Position-based alignment must still reconcile all 3
+    # draws together (not silently drop draw 3 because its ID text never
+    # matched), and Sample ID itself should reflect the majority label.
+    selected = pd.DataFrame([
+        {"Sample ID": "1", "Impact Velocity (m/s)": "449"},
+        {"Sample ID": "2", "Impact Velocity (m/s)": "502"},
+    ])
+    draws = [
+        pd.DataFrame([
+            {"Sample ID": "1", "Impact Velocity (m/s)": "449"},
+            {"Sample ID": "2", "Impact Velocity (m/s)": "502"},
+        ]),
+        pd.DataFrame([
+            {"Sample ID": "1", "Impact Velocity (m/s)": "449"},
+            {"Sample ID": "2", "Impact Velocity (m/s)": "502"},
+        ]),
+        pd.DataFrame([
+            {"Sample ID": "Expt 1", "Impact Velocity (m/s)": "449"},
+            {"Sample ID": "Expt 2", "Impact Velocity (m/s)": "502"},
+        ]),
+    ]
+    reconciled, audit = reconcile_pass1_table(selected, draws)
+    # All 3 draws agreed on the velocity at each position -- confirms draw 3
+    # wasn't silently dropped from the comparison.
+    row0 = _audit_row(audit[audit["sample_id"] == "1"], "Impact Velocity (m/s)")
+    assert row0["majority_fraction"] == pytest.approx(1.0)
+    assert row0["confidence"] == "high"
+    # Sample ID majority-votes to "1" (2 of 3 draws), not "Expt 1".
+    assert reconciled.loc[0, "Sample ID"] == "1"
+    assert reconciled.loc[1, "Sample ID"] == "2"
+
+
+def test_align_draws_by_position_excludes_draws_with_a_different_row_count():
+    # A draw with a different row count can't be safely assumed to list the
+    # same shots in the same order (it may have dropped/added a row) --
+    # must be excluded (None) rather than risk misaligning rows.
+    selected = pd.DataFrame([{"Sample ID": "1"}, {"Sample ID": "2"}])
+    same_count = pd.DataFrame([{"Sample ID": "1"}, {"Sample ID": "2"}])
+    fewer_rows = pd.DataFrame([{"Sample ID": "1"}])
+    aligned = align_draws_by_position(selected, [same_count, fewer_rows])
+    assert aligned[0] is not None
+    assert aligned[1] is None
 
 
 def test_reconcile_pass1_table_flags_low_confidence_in_needs_review():
@@ -76,7 +137,7 @@ def test_reconcile_pass1_table_flags_low_confidence_in_needs_review():
         pd.DataFrame([{"Sample ID": "S1", "Spall Strength (GPa)": "9.0"}]),
     ]
     reconciled, audit = reconcile_pass1_table(selected, draws)
-    assert audit.iloc[0]["confidence"] == "low"
+    assert _audit_row(audit, "Spall Strength (GPa)")["confidence"] == "low"
     assert "Spall Strength (GPa)" in reconciled.loc[0, "Needs Review"]
 
 
@@ -90,8 +151,9 @@ def test_reconcile_pass1_table_abstention_lowers_confidence():
         pd.DataFrame([{"Sample ID": "S1", "Longitudinal Stress at HEL (GPa)": "-"}]),
     ]
     _, audit = reconcile_pass1_table(selected, draws)
-    assert audit.iloc[0]["confidence"] == "low"
-    assert audit.iloc[0]["majority_fraction"] == pytest.approx(1 / 3)
+    row = _audit_row(audit, "Longitudinal Stress at HEL (GPa)")
+    assert row["confidence"] == "low"
+    assert row["majority_fraction"] == pytest.approx(1 / 3)
 
 
 def test_classify_evidence_tier_direct():
